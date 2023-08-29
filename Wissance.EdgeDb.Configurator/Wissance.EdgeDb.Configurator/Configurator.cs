@@ -25,7 +25,8 @@ namespace Wissance.EdgeDb.Configurator
             
             // additionally set security mode
             conn.TLSSecurity = SecurityModes[connOptions.Item2.TlsSecurity];
-            // conn.
+            conn.TLSCertificateAuthority = connOptions.Item2.TlsCa;
+            conn.SecretKey = connOptions.Item2.TlsCertData;
 
             services.AddEdgeDB(conn, cfg =>
             {
