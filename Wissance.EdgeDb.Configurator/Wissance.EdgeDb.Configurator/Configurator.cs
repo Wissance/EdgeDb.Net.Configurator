@@ -14,15 +14,18 @@ namespace Wissance.EdgeDb.Configurator
             ILoggerFactory loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
             // todo(UMV): Resolve security settings using Project Name: that is why important to have same project name for all Backend developers
             // use ~AppData\Local\EdgeDB\config\credentials
-            string connStr = GetEdgeDbConnStrByProjectName(projectName);
-            if (string.IsNullOrEmpty(connStr))
+            Tuple<string, EdgeDbProjectCredentialsSettings> connOptions = GetEdgeDbConnStrByProjectName(projectName);
+            if (string.IsNullOrEmpty(connOptions.Item1))
             {
                 ILogger<object> logger = loggerFactory?.CreateLogger<object>();
                 logger?.LogError("Provider Project name or path to credentials file doesn't exists or your system is not supported (allowed: Windows, Linux)");
             }
 
-            EdgeDBConnection conn = EdgeDBConnection.FromDSN(connStr);
-            // conn.TLSSecurity = TLSSecurityMode.Insecure;
+            EdgeDBConnection conn = EdgeDBConnection.FromDSN(connOptions.Item1);
+            
+            // additionally set security mode
+            conn.TLSSecurity = SecurityModes[connOptions.Item2.TlsSecurity];
+            // conn.
 
             services.AddEdgeDB(conn, cfg =>
             {
@@ -30,15 +33,15 @@ namespace Wissance.EdgeDb.Configurator
             });
         }
 
-        private static string GetEdgeDbConnStrByProjectName(string projectName)
+        private static Tuple<string, EdgeDbProjectCredentialsSettings> GetEdgeDbConnStrByProjectName(string projectName)
         {
             string projectCredentialsFile = GetEdgeDbProjectCredentialFile(projectName);
             string content = File.ReadAllText(projectCredentialsFile);
             EdgeDbProjectCredentialsSettings credentials = JsonSerializer.Deserialize<EdgeDbProjectCredentialsSettings>(content);
             if (credentials == null)
-                return null;
-            return string.Format(EdgeDbConnStrTemplate, credentials.User, credentials.Password, "localhost",
-                credentials.Port, credentials.Database);
+                return new Tuple<string, EdgeDbProjectCredentialsSettings>(null, null);
+            return new Tuple<string, EdgeDbProjectCredentialsSettings>(string.Format(EdgeDbConnStrTemplate, credentials.User, credentials.Password, 
+                "localhost", credentials.Port, credentials.Database), credentials);
         }
 
 
@@ -79,6 +82,14 @@ namespace Wissance.EdgeDb.Configurator
             return projectCredentialsFile;
         }
 
+        private static readonly IDictionary<string, TLSSecurityMode> SecurityModes =
+            new Dictionary<string, TLSSecurityMode>()
+            {
+                {"default", TLSSecurityMode.Default},
+                {"insecure", TLSSecurityMode.Insecure},
+                {"strict", TLSSecurityMode.Strict},
+                {"no_hostname_verification", TLSSecurityMode.NoHostnameVerification}
+            };
         private const string EdgeDbConnStrTemplate = "edgedb://{0}:{1}@{2}:{3}/{4}";
     }
 }
