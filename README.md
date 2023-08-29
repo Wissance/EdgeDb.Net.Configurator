@@ -24,3 +24,4 @@ private void ConfigureDatabase(IServiceCollection services)
 Advantage of this - you just need **only EdgeDb Project name**.
 
 ### NuGet
+[Configurator Nuget package](https://www.nuget.org/packages/Wissance.EdgeDb.Configurator/)
