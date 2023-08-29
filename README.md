@@ -1,5 +1,5 @@
 ## EdgeDb.Net.Configurator
-Is a lib that helps to easily configure and add `EdgeDb.Net` in a ***single line*** (`services.ConfigureEdgeDbDatabase(Settings.Database.ProjectName, poolCfg)`) using just only project name, see following example that a bit larger then single line:
+Is a lib that helps to easily configure and add `EdgeDb.Net` in a ***single line*** (`services.ConfigureEdgeDbDatabase(Settings.Database.ProjectName, poolCfg)`) using just only project name, see following full example that a bit larger then single line:
 
 ```csharp
 private void ConfigureDatabase(IServiceCollection services)
