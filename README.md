@@ -1,1 +1,1 @@
-# EdgeDbNet.Configurer
+# EdgeDbNet.Configurator
