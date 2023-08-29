@@ -9,7 +9,7 @@ namespace Wissance.EdgeDb.Configurator
 {
     public static class Configurator
     {
-        public static void ConfigureEdgeDbDatabase(IServiceCollection services, string projectName, EdgeDBClientPoolConfig poolCfg)
+        public static void ConfigureEdgeDbDatabase(this IServiceCollection services, string projectName, EdgeDBClientPoolConfig poolCfg)
         {
             ILoggerFactory loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
             // todo(UMV): Resolve security settings using Project Name: that is why important to have same project name for all Backend developers
