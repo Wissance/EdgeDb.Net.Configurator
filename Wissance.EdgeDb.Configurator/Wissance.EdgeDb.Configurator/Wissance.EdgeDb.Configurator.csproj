@@ -8,7 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="EdgeDB.Net.Driver" Version="1.2.3" />
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     </ItemGroup>
 
 </Project>
