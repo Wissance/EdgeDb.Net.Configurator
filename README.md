@@ -12,7 +12,24 @@ private void ConfigureDatabase(IServiceCollection services)
         ConnectionTimeout = 5000,
         MessageTimeout = 10000
     };
-    services.ConfigureEdgeDbDatabase(Settings.Database.ProjectName, poolCfg);
+    services.ConfigureEdgeDbDatabase("10.50.55.41", Settings.Database.ProjectName, poolCfg);
+}
+```
+
+or if you are running app && edgedb on the same machine use `ConfigureLocalEdgeDbDatabase`:
+
+```csharp
+private void ConfigureDatabase(IServiceCollection services)
+{
+    EdgeDBClientPoolConfig poolCfg = new EdgeDBClientPoolConfig()
+    {
+        ClientType = EdgeDBClientType.Tcp,
+        SchemaNamingStrategy = INamingStrategy.CamelCaseNamingStrategy,
+        DefaultPoolSize = 256,
+        ConnectionTimeout = 5000,
+        MessageTimeout = 10000
+    };
+    services.ConfigureLocalEdgeDbDatabase( Settings.Database.ProjectName, poolCfg);
 }
 ```
 
