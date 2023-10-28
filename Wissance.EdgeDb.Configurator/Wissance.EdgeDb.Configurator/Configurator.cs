@@ -15,7 +15,8 @@ namespace Wissance.EdgeDb.Configurator
             ConfigureEdgeDbDatabaseImpl(services, IPAddress.Loopback.ToString(), projectName, poolCfg);
         }
         
-        public static void ConfigureEdgeDbDatabase(this IServiceCollection services, string hostName, string projectName, EdgeDBClientPoolConfig poolCfg)
+        public static void ConfigureEdgeDbDatabase(this IServiceCollection services, string hostName, string projectName, EdgeDBClientPoolConfig poolCfg,
+            string[] configSearchDirs , bool includeDefault)
         {
             ConfigureEdgeDbDatabaseImpl(services, hostName, projectName, poolCfg);
         }
