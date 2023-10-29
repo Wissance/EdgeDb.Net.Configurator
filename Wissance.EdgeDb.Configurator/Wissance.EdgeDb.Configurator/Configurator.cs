@@ -16,21 +16,20 @@ namespace Wissance.EdgeDb.Configurator
         }
         
         public static void ConfigureEdgeDbDatabase(this IServiceCollection services, string hostName, string projectName, EdgeDBClientPoolConfig poolCfg,
-            string[] configSearchDirs , bool includeDefault)
+            string[] configSearchDirs, bool includeDefault)
         {
-            ConfigureEdgeDbDatabaseImpl(services, hostName, projectName, poolCfg);
+            ConfigureEdgeDbDatabaseImpl(services, hostName, projectName, poolCfg, configSearchDirs, includeDefault);
         }
 
         private static void ConfigureEdgeDbDatabaseImpl(IServiceCollection services, string hostName, string projectName,
-            EdgeDBClientPoolConfig poolCfg)
+            EdgeDBClientPoolConfig poolCfg, string[] configSearchDirs = null, bool includeDefault = true)
         {
             ILoggerFactory loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
-            // todo(UMV): Resolve security settings using Project Name: that is why important to have same project name for all Backend developers
-            // use ~AppData\Local\EdgeDB\config\credentials
-            Tuple<string, EdgeDbProjectCredentialsSettings> connOptions = GetEdgeDbConnStrByProjectName(hostName, projectName);
+            ILogger<object> logger = loggerFactory?.CreateLogger<object>();
+            IList<string> configSearchDirectories = GetEdgeDbConfigSearchDirectories(logger, configSearchDirs, includeDefault);
+            Tuple<string, EdgeDbProjectCredentialsSettings> connOptions = GetEdgeDbConnStrByProjectName(logger, hostName, projectName, configSearchDirectories);
             if (string.IsNullOrEmpty(connOptions.Item1))
             {
-                ILogger<object> logger = loggerFactory?.CreateLogger<object>();
                 logger?.LogError("Provider Project name or path to credentials file doesn't exists or your system is not supported (allowed: Windows, Linux)");
             }
 
@@ -47,9 +46,27 @@ namespace Wissance.EdgeDb.Configurator
             });
         }
 
-        private static Tuple<string, EdgeDbProjectCredentialsSettings> GetEdgeDbConnStrByProjectName(string hostName, string projectName)
+        private static Tuple<string, EdgeDbProjectCredentialsSettings> GetEdgeDbConnStrByProjectName(ILogger<object> logger, string hostName, string projectName, 
+            IList<string> configSearchDirectories)
         {
-            string projectCredentialsFile = GetEdgeDbProjectCredentialFile(projectName);
+            string projectCredentialsFile = string.Empty;
+            bool configFound = false;
+            foreach (string searchDirectory in configSearchDirectories)
+            {
+                projectCredentialsFile = GetEdgeDbProjectCredentialFile(searchDirectory, projectName);
+                if (File.Exists(projectCredentialsFile))
+                {
+                    configFound = true;
+                    break;
+                }
+            }
+
+            if (!configFound)
+            {
+                logger?.LogWarning($"Edgedb project \"{projectName}\" credentials file wasn't found in search directories, ensure that edgedb credentials file exists");
+                return new Tuple<string, EdgeDbProjectCredentialsSettings>(null, null);
+            }
+
             string content = File.ReadAllText(projectCredentialsFile);
             EdgeDbProjectCredentialsSettings credentials = JsonSerializer.Deserialize<EdgeDbProjectCredentialsSettings>(content);
             if (credentials == null)
@@ -57,43 +74,57 @@ namespace Wissance.EdgeDb.Configurator
             return new Tuple<string, EdgeDbProjectCredentialsSettings>(string.Format(EdgeDbConnStrTemplate, credentials.User, credentials.Password, 
                 hostName, credentials.Port, credentials.Database), credentials);
         }
-
-
-        private static string GetEdgeDbProjectCredentialFile(string projectName)
+        
+        private static string GetEdgeDbProjectCredentialFile(string directory, string projectName)
         {
-            string projectCredentialsFile = string.Empty;
-            if (OperatingSystem.IsWindows())
+            string projectCredentialsFile = Path.Combine(directory, $"{projectName}.json");
+            return projectCredentialsFile;
+        }
+
+        private static IList<string> GetEdgeDbConfigSearchDirectories(ILogger<object> logger, string[] configSearchDirs, bool includeDefault)
+        {
+            // Config search order - 1. directories in configSearchDirs, 2 - default dirs\
+            List<string> dirs = new List<string>();
+            if (configSearchDirs != null && configSearchDirs.Any())
             {
-                // should be using ~AppData\Local\EdgeDB\config\credentials\{projectName}.json as a path
-                string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                projectCredentialsFile = Path.Combine(new string[]
-                {
-                    appData,
-                    "EdgeDB", "config", "credentials",
-                    projectName + ".json"
-                });
+                dirs.AddRange(configSearchDirs);
             }
-            else
+
+            if (includeDefault)
             {
-                if (OperatingSystem.IsLinux())
+                if (OperatingSystem.IsWindows())
                 {
-                    // linux - /.config/edgedb/credentials/{projectName}.json relative to home dir
-                    string home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-                    projectCredentialsFile = Path.Combine(new string[]
+                    // default project credentials files is located in dir ~AppData\Local\EdgeDB\config\credentials\{projectName}.json
+                    string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    string projectCredentialsDir = Path.Combine(new string[]
                     {
-                        home,
-                        ".config", "edgedb", "credentials",
-                        projectName + ".json"
+                        appData,
+                        "EdgeDB", "config", "credentials",
                     });
+                    dirs.Add(projectCredentialsDir);
                 }
                 else
                 {
-                    throw new NotImplementedException(
-                        "Other systems are not implemented, if you would like to contribute visit: \"https://github.com/Wissance/EdgeDb.Net.Configurator\"");
+                    if (OperatingSystem.IsLinux())
+                    {
+                        // linux - /.config/edgedb/credentials/{projectName}.json relative to home dir
+                        string home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                        string projectCredentialsDir = Path.Combine(new string[]
+                        {
+                            home,
+                            ".config", "edgedb", "credentials"
+                        });
+                        dirs.Add(projectCredentialsDir);
+                    }
+                    else
+                    {
+                        logger?.LogWarning("Unsupported platform for EdbeDB configuration");
+                        // todo(UMV): other platform don't not supported now, please add issue here: https://github.com/Wissance/EdgeDb.Net.Configurator/issues
+                    }
                 }
             }
 
-            return projectCredentialsFile;
+            return dirs;
         }
 
         private static readonly IDictionary<string, TLSSecurityMode> SecurityModes =
