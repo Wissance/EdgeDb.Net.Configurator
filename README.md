@@ -12,11 +12,13 @@ private void ConfigureDatabase(IServiceCollection services)
         ConnectionTimeout = 5000,
         MessageTimeout = 10000
     };
-    services.ConfigureEdgeDbDatabase("10.50.55.41", Settings.Database.ProjectName, poolCfg);
+    services.ConfigureEdgeDbDatabase("10.50.55.41", Settings.Database.ProjectName, poolCfg, null, true);
 }
 ```
 
-or if you are running app && edgedb on the same machine use `ConfigureLocalEdgeDbDatabase`:
+or you could pass an array of directories where edgedb project credentials could be found, i.e. `services.ConfigureEdgeDbDatabase("10.50.55.41", Settings.Database.ProjectName, poolCfg, new[] {"/usr/myapp/edgedb", "/usr/share"}, true);`
+
+or if you are running app && edgedb on the same machine use simplified method `ConfigureLocalEdgeDbDatabase`:
 
 ```csharp
 private void ConfigureDatabase(IServiceCollection services)
@@ -29,7 +31,7 @@ private void ConfigureDatabase(IServiceCollection services)
         ConnectionTimeout = 5000,
         MessageTimeout = 10000
     };
-    services.ConfigureLocalEdgeDbDatabase( Settings.Database.ProjectName, poolCfg);
+    services.ConfigureLocalEdgeDbDatabase(Settings.Database.ProjectName, poolCfg);
 }
 ```
 
